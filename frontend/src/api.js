@@ -23,3 +23,19 @@ export async function patchJSON(url, body) {
   if (!r.ok) throw new Error(await r.text())
   return r.json()
 }
+
+export async function putJSON(url, body) {
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function deleteJSON(url) {
+  const r = await fetch(url, { method: 'DELETE' })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}

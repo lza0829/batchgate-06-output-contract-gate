@@ -27,7 +27,7 @@ watch(orchId, load)
 <template>
   <div class="page">
     <h1>尝试记录</h1>
-    <p class="muted">每次作业尝试的状态：success / failed / skipped_dep。</p>
+    <p class="muted">每次作业尝试的状态：success / failed / skipped_dep / skipped_contract（契约拦截的详情含 violations）。</p>
     <p v-if="err" class="tag danger">{{ err }}</p>
     <div class="panel">
       <label>

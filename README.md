@@ -19,11 +19,32 @@ docker compose up --build
 
 配置作业与依赖 → 触发一次编排 Run → 按依赖顺序执行夹具作业 → 写入尝试记录与产出水位 → 报告对账
 
+## 产出契约闸（output-contract-gate）
+
+下游可对指定上游配置产出契约，编排时在上游 success 之后、下游执行之前核验：
+
+- **min_rows**：上游产出摘要 `artifact_rows` 不得低于该值（拦 0 行空成功）。
+- **required_field**：上游尝试详情（产出摘要）里该字段必须存在且非 null（如 `watermark_ts`）。
+
+契约不过 → 下游不执行，尝试记为 `skipped_contract`（detail 含 `violations`，写明哪条不过），
+且该下游不抬自己的水位；报告计数由尝试记录汇总得出，success / failed / skipped_dep /
+skipped_contract 与尝试列表一一对得上。
+
+接口：
+
+- `GET /api/contracts` 查看全部契约
+- `PUT /api/jobs/{job_id}/contracts/{upstream_job_id}` 配置/覆盖契约（上游须在该下游 depends_on 内）
+- `DELETE /api/jobs/{job_id}/contracts/{upstream_job_id}` 删除契约
+
+前端「产出契约」页可配置与查看；「编排台」一次 Run 即可看到契约通过与契约拦住两条路径。
+
 ## 种子说明
 
 - **ingest_orders**：无依赖，写出订单水位。
 - **dim_customer**：无依赖，写出客户维表水位。
-- **fact_order_daily**：依赖上两者成功且水位推进后才可执行（底座仅做“上游成功”检查，严格水位闸与重试预算留给 0-1 题）。
+- **ingest_refunds**：无依赖，夹具为 0 行空成功（success 但 `artifact_rows=0`）。
+- **fact_order_daily**：依赖 ingest_orders / dim_customer，各配契约 `min_rows=1 + required_field=watermark_ts` → 契约通过路径。
+- **fact_refund_daily**：依赖 ingest_refunds，契约 `min_rows=1` 被空成功触发 → 契约拦截路径（`skipped_contract`，不抬水位）。
 
 ## 技术栈
 

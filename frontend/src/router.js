@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from './pages/Dashboard.vue'
 import Jobs from './pages/Jobs.vue'
+import Contracts from './pages/Contracts.vue'
 import Orchestrate from './pages/Orchestrate.vue'
 import Attempts from './pages/Attempts.vue'
 import Watermarks from './pages/Watermarks.vue'
@@ -11,6 +12,7 @@ export default createRouter({
   routes: [
     { path: '/', component: Dashboard },
     { path: '/jobs', component: Jobs },
+    { path: '/contracts', component: Contracts },
     { path: '/orchestrate', component: Orchestrate },
     { path: '/attempts', component: Attempts },
     { path: '/watermarks', component: Watermarks },

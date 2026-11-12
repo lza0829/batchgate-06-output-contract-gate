@@ -15,7 +15,7 @@ onMounted(async () => {
     <div class="panel" v-if="stats">
       <p>作业 {{ stats.job_count }}（启用 {{ stats.enabled_jobs }}）</p>
       <p>编排 {{ stats.orchestration_count }} · 尝试 {{ stats.attempt_count }}</p>
-      <p>已有水位的作业 {{ stats.watermarked_jobs }}</p>
+      <p>已有水位的作业 {{ stats.watermarked_jobs }} · 产出契约 {{ stats.contract_count }} 条</p>
     </div>
   </div>
 </template>

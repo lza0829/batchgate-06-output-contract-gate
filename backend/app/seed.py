@@ -40,6 +40,14 @@ def init_db():
             artifact_rows INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS output_contracts(
+            id INTEGER PRIMARY KEY,
+            job_id INTEGER NOT NULL,
+            upstream_job_id INTEGER NOT NULL,
+            min_rows INTEGER NOT NULL DEFAULT 0,
+            required_field TEXT,
+            UNIQUE(job_id, upstream_job_id)
+        );
         """
     )
     if conn.execute("SELECT COUNT(*) c FROM jobs").fetchone()["c"] == 0:
@@ -61,12 +69,28 @@ def init_db():
                 "无依赖：写出客户维表水位",
             ),
             (
+                "ingest_refunds",
+                "ingest_refunds.json",
+                "[]",
+                1,
+                1,
+                "无依赖：夹具为 0 行空成功，用于演示契约拦截",
+            ),
+            (
                 "fact_order_daily",
                 "fact_order_daily.json",
                 '["ingest_orders","dim_customer"]',
                 1,
                 1,
-                "依赖两路上游成功后才执行（底座仅查上游成功）",
+                "依赖两路上游，且对两路各配了产出契约（min_rows=1 + 必填 watermark_ts）",
+            ),
+            (
+                "fact_refund_daily",
+                "fact_refund_daily.json",
+                '["ingest_refunds"]',
+                1,
+                1,
+                "依赖 ingest_refunds；契约 min_rows=1 会被空成功触发，记 skipped_contract",
             ),
         ]
         conn.executemany(
@@ -81,6 +105,26 @@ def init_db():
                 "INSERT OR IGNORE INTO watermarks(job_id, watermark_ts, artifact_rows, updated_at) VALUES (?,?,?,?)",
                 (row["id"], None, 0, None),
             )
+        id_by_name = {
+            r["name"]: r["id"]
+            for r in conn.execute("SELECT id, name FROM jobs").fetchall()
+        }
+        contracts = [
+            # (downstream, upstream, min_rows, required_field)
+            ("fact_order_daily", "ingest_orders", 1, "watermark_ts"),
+            ("fact_order_daily", "dim_customer", 1, "watermark_ts"),
+            ("fact_refund_daily", "ingest_refunds", 1, "watermark_ts"),
+        ]
+        conn.executemany(
+            """
+            INSERT INTO output_contracts(job_id, upstream_job_id, min_rows, required_field)
+            VALUES (?,?,?,?)
+            """,
+            [
+                (id_by_name[d], id_by_name[u], min_rows, field)
+                for d, u, min_rows, field in contracts
+            ],
+        )
         conn.execute(
             "INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)",
             ("default_max_attempts", "1"),
